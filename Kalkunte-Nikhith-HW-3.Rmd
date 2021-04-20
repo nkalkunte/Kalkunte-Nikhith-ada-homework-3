@@ -71,7 +71,14 @@ h.mLog = gLOG +
   geom_line(data = yPredict.mLog, aes(x=x,y=upr, color = "blue")) +
   scale_colour_manual(name = '', values =c('red'='red','blue'='blue'), labels = c('90% CI','Prediction Int.'))
 
-  
+(predict(m, newdata = data.frame(Brain_Size_Species_Mean = 750), interval = 'prediction'))
+(predict(logM, newdata = data.frame(Brain_Size_Species_Mean = 750), interval = 'prediction'))
 ```
+Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?
+Looking at your two models (i.e., untransformed versus log-log transformed), which do you think is better? Why?
 
+# Challenge 2
+```{r}
+
+```
 
