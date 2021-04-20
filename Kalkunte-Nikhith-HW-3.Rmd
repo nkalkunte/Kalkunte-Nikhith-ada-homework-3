@@ -1,0 +1,77 @@
+---
+title: "Kalkunte-Nikhith-HW-3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+library(broom)
+```
+
+# Challenge 1
+```{r}
+f = "https://raw.githubusercontent.com/difiore/ADA-datasets/master/KamilarAndCooperData.csv"
+d = read_csv(f)
+
+m = lm(WeaningAge_d~Brain_Size_Species_Mean, data = d)
+logM = lm(log(WeaningAge_d)~log(Brain_Size_Species_Mean), data = d)
+
+
+g  = ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = WeaningAge_d)) + 
+  geom_point() +
+  geom_abline(slope = m$coefficients[2],intercept = m$coefficients[1])+
+  ggtitle("Untransformed Model") + geom_text(x = 350, y = 300, label = paste0("y = ",round(m$coefficients[2],digits = 2),"x + ",round(m$coefficients[1],digits = 2)))
+
+gLOG = ggplot(data = d, aes(x = log(Brain_Size_Species_Mean), y = log(WeaningAge_d))) + 
+  geom_point() +
+  geom_abline(slope = logM$coefficients[2],intercept = logM$coefficients[1])+
+  ggtitle("Log Trasformed Model") + geom_text(x = 4, y = 4, label = paste0("y = ",round(logM$coefficients[2],digits = 2),"x + ",round(logM$coefficients[1],digits = 2)))
+
+plot_grid(g,gLOG)
+
+```
+
+```{r}
+alpha = .1
+(m.summary = tidy(m, conf.int = TRUE, conf.level = 1-alpha))
+(mLog.summary = tidy(logM, conf.int = TRUE, conf.level = 1-alpha))
+```
+
+ID B1 point estimate, outcome of hypothesis test, find 90% CI for slope
+
+```{r}
+xvals = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean)
+ci.m = tibble(x = xvals$Brain_Size_Species_Mean, 
+              lower = confint(m, level  = .90)[2,1]*xvals$Brain_Size_Species_Mean + confint(m,level  = .90)[1,1],
+              upper = confint(m, level  = .90)[2,2]*xvals$Brain_Size_Species_Mean + confint(m,level  = .90)[1,2])
+
+ci.mLog = tibble(x = log(xvals$Brain_Size_Species_Mean), 
+              lower = confint(logM, level  = .90)[2,1]*log(xvals$Brain_Size_Species_Mean) + confint(logM,level  = .90)[1,1],
+              upper = confint(logM, level  = .90)[2,2]*log(xvals$Brain_Size_Species_Mean) + confint(logM,level  = .90)[1,2])
+
+
+yPredict.m = as_tibble(predict(m, newdata = xvals, interval = 'prediction')) 
+yPredict.mLog = as_tibble(predict(logM, newdata = log(xvals), interval = 'prediction')) 
+yPredict.m$x = xvals$Brain_Size_Species_Mean
+yPredict.mLog$x = log(xvals$Brain_Size_Species_Mean)
+h.m = g + 
+  geom_line(data = ci.m, aes(x = x, y = lower, color = "red")) +
+  geom_line(data = ci.m, aes(x = x, y = upper, color = "red")) +
+  geom_line(data = yPredict.m, aes(x=x,y=lwr, color = "blue")) + 
+  geom_line(data = yPredict.m, aes(x=x,y=upr, color = "blue")) +
+  scale_colour_manual(name = '', values =c('red'='red','blue'='blue'), labels = c('90% CI','Prediction Int.'))
+
+
+h.mLog = gLOG + 
+  geom_line(data = ci.mLog, aes(x = x, y = lower, color = "red")) +
+  geom_line(data = ci.mLog, aes(x = x, y = upper, color = "red")) +
+  geom_line(data = yPredict.mLog, aes(x=x,y=lwr, color = "blue")) + 
+  geom_line(data = yPredict.mLog, aes(x=x,y=upr, color = "blue")) +
+  scale_colour_manual(name = '', values =c('red'='red','blue'='blue'), labels = c('90% CI','Prediction Int.'))
+
+  
+```
+
+
