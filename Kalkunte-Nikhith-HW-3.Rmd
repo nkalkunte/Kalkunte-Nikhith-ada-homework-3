@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(cowplot)
 library(broom)
+library(infer)
 ```
 
 # Challenge 1
@@ -79,6 +80,105 @@ Looking at your two models (i.e., untransformed versus log-log transformed), whi
 
 # Challenge 2
 ```{r}
+m2 = lm(data = d, log(MeanGroupSize)~log(Body_mass_female_mean))
+m2$coefficients
+d$logMeanGroupSize = log(d$MeanGroupSize)
+d$logBody_mass_female_mean = log(d$Body_mass_female_mean)
+boot.slope =  d %>%
+  specify(logMeanGroupSize~logBody_mass_female_mean) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "slope")
+
+boot.intercept = tibble(replicate = boot.slope$replicate, stat = mean(d$logMeanGroupSize,na.rm=TRUE) - mean(d$logBody_mass_female_mean, na.rm=TRUE)*boot.slope$stat)
+
+visualize(boot.slope)
+hist(boot.intercept$stat)
+
+alpha <- 0.05
+confidence_level <- 1 - alpha
+p_lower <- alpha / 2
+p_upper <- 1 - (alpha / 2)
+
+
+boot.slope.summary <- boot.slope %>%
+  summarize(
+    estimate = mean(stat),
+    std.error = sd(stat),
+    boot.lower = quantile(stat, p_lower),
+    boot.upper = quantile(stat, p_upper)
+  )
+
+boot.intercept.summary <- boot.intercept %>%
+  summarize(
+    estimate = mean(stat),
+    std.error = sd(stat),
+    boot.lower = quantile(stat, p_lower),
+    boot.upper = quantile(stat, p_upper)
+  )
 
 ```
+How do the SEs estimated from the bootstrap sampling distribution compare to those estimated mathematically as part of lm() function?
+How do your bootstrap CIs compare to those estimated mathematically as part of the lm() function?
+
+# Challenge 3
+```{r}
+boot_lm = function(d,model,conf.level = 0.95,reps=1000){
+ alpha = 1-conf.level
+p_lower <- alpha / 2
+p_upper <- 1 - (alpha / 2)
+
+f = as.formula(model)
+m = lm(data = d,f)
+true = tidy(m,conf.int = TRUE, conf.level = 1 - alpha)[,c(2,3,6,7)]
+
+boot.slope =  d %>%
+  specify(f) %>%
+  generate(reps = reps, type = "bootstrap") %>%
+  calculate(stat = "slope")
+
+b = d %>%
+  specify(f) %>%
+  generate(reps = 1000, type = "bootstrap")
+x = colnames(b)[3]
+y = colnames(b)[2]
+b.1 = b %>%
+  group_by(replicate) %>%
+  summarise_at(
+    .cols = c(x,y),
+    .funs = c(mean = "mean")
+  )
+
+boot.intercept = tibble(replicate = boot.slope$replicate, stat = unlist(b.1[,3] - b.1[,2]*boot.slope$stat))
+
+boot.intercept.summary <- boot.intercept %>%
+  summarize(
+    estimate = mean(stat),
+    std.error = sd(stat),
+    conf.low = quantile(stat, p_lower),
+    conf.high = quantile(stat, p_upper)
+  )
+
+boot.slope.summary <- boot.slope %>%
+  summarize(
+    estimate = mean(stat),
+    std.error = sd(stat),
+    conf.low = quantile(stat, p_lower),
+    conf.high = quantile(stat, p_upper)
+  )
+
+data = rbind(c("Original B0",true[2,]),
+             c("Original B1",true[1,]),
+             c("Bootstrapped B0",boot.slope.summary),
+             c("Bootstrapped B1",boot.intercept.summary))
+return(data)
+}
+
+d$logDayLength_km = log(d$DayLength_km)
+
+(M1 = boot_lm(d,model = "logMeanGroupSize ~ logBody_mass_female_mean"))
+(M2 = boot_lm(d,model = "logDayLength_km ~ logBody_mass_female_mean"))
+(M3 = boot_lm(d,model = "logDayLength_km ~ logBody_mass_female_mean + logMeanGroupSize"))
+
+```
+I wasn't able to get the multiple regressions working in my function as written. 
 
