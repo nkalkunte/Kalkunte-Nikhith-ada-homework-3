@@ -39,8 +39,10 @@ alpha = .1
 (m.summary = tidy(m, conf.int = TRUE, conf.level = 1-alpha))
 (mLog.summary = tidy(logM, conf.int = TRUE, conf.level = 1-alpha))
 ```
+For the untransformed model, B1 point estimate is 2.64, the p value us 1.59e-26 indicating a rejection of the null hypothesis, and the 90% CI is [2.33,2.94]
 
-ID B1 point estimate, outcome of hypothesis test, find 90% CI for slope
+For the transformed model, B1 point estimate is 0.57, the p value us 1.99e-35 indicating a rejection of the null hypothesis, and the 90% CI is [0.52,0.62]
+
 
 ```{r}
 xvals = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean)
@@ -75,13 +77,17 @@ h.mLog = gLOG +
 (predict(m, newdata = data.frame(Brain_Size_Species_Mean = 750), interval = 'prediction'))
 (predict(logM, newdata = data.frame(Brain_Size_Species_Mean = 750), interval = 'prediction'))
 ```
-Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?
-Looking at your two models (i.e., untransformed versus log-log transformed), which do you think is better? Why?
+I do trust the model to predict observations accurately for 750gm as most of the data used to create the model ar eless than 200gm. 
+
+The transformed model looks to represent a true minimization residuals and a normal distribution of data points at all values of the explanatory variable plotted. This means the model created will have astronger fit with the data. 
+
 
 # Challenge 2
 ```{r}
+alpha <- 0.05
 m2 = lm(data = d, log(MeanGroupSize)~log(Body_mass_female_mean))
-m2$coefficients
+tidy(m2,conf.int = TRUE, conf.level = 1 - alpha)
+
 d$logMeanGroupSize = log(d$MeanGroupSize)
 d$logBody_mass_female_mean = log(d$Body_mass_female_mean)
 boot.slope =  d %>%
@@ -94,7 +100,7 @@ boot.intercept = tibble(replicate = boot.slope$replicate, stat = mean(d$logMeanG
 visualize(boot.slope)
 hist(boot.intercept$stat)
 
-alpha <- 0.05
+
 confidence_level <- 1 - alpha
 p_lower <- alpha / 2
 p_upper <- 1 - (alpha / 2)
@@ -117,8 +123,9 @@ boot.intercept.summary <- boot.intercept %>%
   )
 
 ```
-How do the SEs estimated from the bootstrap sampling distribution compare to those estimated mathematically as part of lm() function?
-How do your bootstrap CIs compare to those estimated mathematically as part of the lm() function?
+The SE's estimated via the bootstrap sampling distribution compare well to those estimated via the lm() function. For the estimate of slope, lm() reported a SE of 0.05563, while the bootstrapped estimated reported an SE of 0.06271. For the estimate of the intercept, lm() reported a SE of 0.43752, and the bootstrapped is 0.4857971. These values are relatively close in magnitude. 
+
+The CI's estimated via the bootstrap sampling distribution compare well to those estimated via the lm() function. For the estimate of slope, lm() reported a CI of [0.396, 0.616], while the bootstrapped estimated reported an CI of [0.384, 0.634] For the estimate of the intercept, lm() reported a CI of [-2.642, -0.912], and the bootstrapped is [-2.814,-0.877]. Though there is more variace seen here than the Se values, I believe these values are comparable.  
 
 # Challenge 3
 ```{r}
@@ -166,10 +173,10 @@ boot.slope.summary <- boot.slope %>%
     conf.high = quantile(stat, p_upper)
   )
 
-data = rbind(c("Original B0",true[2,]),
-             c("Original B1",true[1,]),
-             c("Bootstrapped B0",boot.slope.summary),
-             c("Bootstrapped B1",boot.intercept.summary))
+data = rbind(c("Original B1",true[2,]),
+             c("Original B0",true[1,]),
+             c("Bootstrapped B1",boot.slope.summary),
+             c("Bootstrapped B0",boot.intercept.summary))
 return(data)
 }
 
@@ -177,7 +184,7 @@ d$logDayLength_km = log(d$DayLength_km)
 
 (M1 = boot_lm(d,model = "logMeanGroupSize ~ logBody_mass_female_mean"))
 (M2 = boot_lm(d,model = "logDayLength_km ~ logBody_mass_female_mean"))
-(M3 = boot_lm(d,model = "logDayLength_km ~ logBody_mass_female_mean + logMeanGroupSize"))
+#(M3 = boot_lm(d,model = "logDayLength_km ~ logBody_mass_female_mean + logMeanGroupSize"))
 
 ```
 I wasn't able to get the multiple regressions working in my function as written. 
